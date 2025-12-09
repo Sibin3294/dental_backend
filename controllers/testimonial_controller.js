@@ -93,7 +93,7 @@ exports.deleteTestimonial = async (req, res) => {
   try {
     await Testimonial.findByIdAndDelete(req.params.id);
 
-    res.json({ status: true, message: "Testimonial deleted" });
+    res.json({ status: true, message: "Testimonial deleted sucessfuly" });
   } catch (error) {
     res.status(500).json({ status: false, message: error.message });
   }
