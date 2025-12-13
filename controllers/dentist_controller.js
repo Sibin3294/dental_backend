@@ -1,4 +1,6 @@
 const Dentist = require("../models/Dentist");
+const DentistSlot = require("../models/DentistSlot");
+
 
 // get all dentist
 
@@ -10,6 +12,84 @@ exports.getAllDentists = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+// exports.getAllDentists = async (req, res) => {
+//   try {
+//     const date = req.query.date ? new Date(req.query.date) : new Date();
+
+//     const startOfDay = new Date(date);
+//     startOfDay.setHours(0, 0, 0, 0);
+
+//     const endOfDay = new Date(date);
+//     endOfDay.setHours(23, 59, 59, 999);
+
+//     const dentists = await Dentist.find().lean();
+//     const dentistIds = dentists.map(d => d._id);
+
+//     const slots = await DentistSlot.find({
+//       dentistId: { $in: dentistIds },
+//       date: { $gte: startOfDay, $lte: endOfDay }
+//     }).lean();
+
+//     const slotMap = {};
+//     slots.forEach(s => {
+//       slotMap[s.dentistId.toString()] = s.slots;
+//     });
+
+//     res.json({
+//       success: true,
+//       data: dentists.map(d => ({
+//         ...d,
+//         slots: slotMap[d._id.toString()] || []
+//       }))
+//     });
+//   } catch (err) {
+//     res.status(500).json({ success: false, message: err.message });
+//   }
+// };
+
+// exports.getAllDentists = async (req, res) => {
+//   try {
+//     const date = req.query.date
+//       ? new Date(req.query.date)
+//       : new Date();
+
+//     date.setHours(0, 0, 0, 0);
+
+//     const dentists = await Dentist.find().lean();
+
+//     const dentistIds = dentists.map(d => d._id);
+
+//     const slots = await DentistSlot.find({
+//       dentistId: { $in: dentistIds },
+//       date
+//     }).lean();
+
+//     const slotMap = {};
+//     slots.forEach(s => {
+//       slotMap[s.dentistId.toString()] = s.slots;
+//     });
+
+//     const response = dentists.map(dentist => ({
+//       ...dentist,
+//       slots: slotMap[dentist._id.toString()] || []
+//     }));
+
+//     res.json({
+//       success: true,
+//       date,
+//       data: response
+//     });
+
+//   } catch (err) {
+//     res.status(500).json({
+//       success: false,
+//       message: err.message
+//     });
+//   }
+// };
+
+
 
 // add new dentist
 
@@ -176,3 +256,173 @@ exports.updateDentist = async (req, res) => {
   }
 };
 
+
+// ADD SLOTS FOR DENTISTS
+exports.addDentistSlots = async (req, res) => {
+  try {
+    const { dentistId } = req.params;
+    const { date, slots } = req.body;
+
+    if (!date || !slots || slots.length === 0) {
+      return res.status(400).json({
+        message: "Date and slots are required"
+      });
+    }
+
+    const slotObjects = slots.map(time => ({
+      time,
+      isBooked: false
+    }));
+
+    const dentistSlot = await DentistSlot.create({
+      dentistId,
+      date: new Date(date),
+      slots: slotObjects
+    });
+
+    res.status(201).json({
+      message: "Dentist slots added successfully",
+      data: dentistSlot
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: "Slots already added for this dentist on this date"
+      });
+    }
+
+    res.status(500).json({
+      message: "Failed to add slots",
+      error: error.message
+    });
+  }
+};
+
+// GET DENTISTS SLOTS
+exports.getDentistSlots = async (req, res) => {
+  try {
+    const { dentistId } = req.params;
+    const { date } = req.query;
+
+    const query = { dentistId };
+
+    if (date) {
+      query.date = new Date(date);
+    }
+
+    const slots = await DentistSlot.find(query).sort({ date: 1 });
+
+    res.json({
+      message: "Slots fetched successfully",
+      data: slots
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch slots",
+      error: error.message
+    });
+  }
+};
+
+// get dentist slots by date
+
+exports.getAllDentistsSlotsByDate = async (req, res) => {
+  try {
+    const date = req.query.date
+      ? new Date(req.query.date)
+      : new Date();
+
+    date.setHours(0, 0, 0, 0);
+
+    const dentists = await Dentist.find().lean();
+    const dentistIds = dentists.map(d => d._id);
+
+    const slots = await DentistSlot.find({
+      dentistId: { $in: dentistIds },
+      date
+    }).lean();
+
+    const slotMap = {};
+    slots.forEach(s => {
+      slotMap[s.dentistId.toString()] = s.slots;
+    });
+
+    res.json({
+      success: true,
+      data: dentists.map(d => ({
+        ...d,
+        slots: slotMap[d._id.toString()] || []
+      }))
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// update dentists slots
+
+exports.updateDentistSlots = async (req, res) => {
+  try {
+    const { dentistId } = req.params;
+    const { date, slots } = req.body;
+
+    if (!date || !Array.isArray(slots) || slots.length === 0) {
+      return res.status(400).json({
+        message: "Date and slots are required"
+      });
+    }
+
+    // Normalize date (VERY IMPORTANT)
+    const slotDate = new Date(date);
+    slotDate.setHours(0, 0, 0, 0);
+
+    let dentistSlot = await DentistSlot.findOne({
+      dentistId,
+      date: slotDate
+    });
+
+    // Convert incoming slots to objects
+    const incomingSlots = slots.map(time => ({
+      time,
+      isBooked: false
+    }));
+
+    // ✅ If no slots exist → CREATE
+    if (!dentistSlot) {
+      dentistSlot = await DentistSlot.create({
+        dentistId,
+        date: slotDate,
+        slots: incomingSlots
+      });
+
+      return res.json({
+        message: "Slots created successfully",
+        data: dentistSlot
+      });
+    }
+
+    // ✅ If slots exist → MERGE
+    const existingTimes = new Set(
+      dentistSlot.slots.map(s => s.time)
+    );
+
+    incomingSlots.forEach(slot => {
+      if (!existingTimes.has(slot.time)) {
+        dentistSlot.slots.push(slot);
+      }
+    });
+
+    await dentistSlot.save();
+
+    res.json({
+      message: "Slots updated successfully",
+      data: dentistSlot
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to update slots",
+      error: error.message
+    });
+  }
+};

@@ -68,6 +68,8 @@ app.use("/api/programs", require("./routes/program_routes"));
 app.use("/api/appointments", require("./routes/appointment_routes"));
 app.use("/api/payments", require("./routes/payment_routes"));
 app.use("/api/testimonials", require("./routes/testimonial_routes"));
+app.use("/api/attendance", require("./routes/attendence_routes"));
+
 
 app.get("/", (req, res) => {
   res.send("Dental API Running");
