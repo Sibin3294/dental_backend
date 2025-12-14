@@ -9,6 +9,8 @@ const { deleteDentist } = require("../controllers/dentist_controller");
 const { addDentistSlots } = require("../controllers/dentist_controller");
 const { getDentistSlots } = require("../controllers/dentist_controller");
 const { updateDentistSlots } = require("../controllers/dentist_controller");
+const { getAvailableDentistsByDate } = require("../controllers/dentist_controller");
+
 
 
 const router = express.Router();
@@ -22,6 +24,8 @@ router.post("/:dentistId/slots", addDentistSlots);
 router.get("/getDentistSlots", getDentistSlots);
 router.get("/getDentistSlots", getDentistSlots);
 router.put("/updateDentistSlots/:dentistId/slots", updateDentistSlots);
+router.get("/getAvailableDentistsByDate", getAvailableDentistsByDate);
+
 
 
 module.exports = router;

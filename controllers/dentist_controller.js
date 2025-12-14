@@ -426,3 +426,62 @@ exports.updateDentistSlots = async (req, res) => {
     });
   }
 };
+
+//getAvailableDentistsByDate
+exports.getAvailableDentistsByDate = async (req, res) => {
+  const { date } = req.query;
+
+  if (!date) {
+    return res.status(400).json({ message: "Date is required" });
+  }
+
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(date);
+  end.setHours(23, 59, 59, 999);
+
+  // 1️⃣ Get dentists
+  const dentists = await Dentist.find();
+
+  // 2️⃣ Get attendance
+  const attendance = await DentistAttendance.find({
+    date: { $gte: start, $lte: end }
+  });
+
+  const attendanceMap = {};
+  attendance.forEach(a => {
+    attendanceMap[a.dentistId.toString()] = a.status;
+  });
+
+  // 3️⃣ Get booked appointments
+  const appointments = await Appointment.find({
+    date: { $gte: start, $lte: end }
+  });
+
+  const bookedMap = {};
+  appointments.forEach(a => {
+    const key = `${a.dentistId}_${a.time}`;
+    bookedMap[key] = true;
+  });
+
+  // 4️⃣ Build response
+  const response = dentists.map(d => {
+    if (attendanceMap[d._id] !== "present") return null;
+
+    const slots = d.slots.map(time => ({
+      time,
+      available: !bookedMap[`${d._id}_${time}`]
+    }));
+
+    return {
+      id: d._id,
+      name: d.name,
+      speciality: d.speciality,
+      email: d.email,
+      slots
+    };
+  }).filter(Boolean);
+
+  res.json({ success: true, data: response });
+};
