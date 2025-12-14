@@ -921,6 +921,57 @@ const DentistSlot = require("../models/DentistSlot");
 //   }
 // };
 
+// exports.getAvailableDentistsByDate = async (req, res) => {
+//   try {
+//     const { date } = req.query;
+
+//     if (!date) {
+//       return res.status(400).json({ message: "Date is required" });
+//     }
+
+//     // ✅ DATE RANGE (timezone-safe)
+//     const start = new Date(date);
+//     start.setHours(0, 0, 0, 0);
+
+//     const end = new Date(date);
+//     end.setHours(23, 59, 59, 999);
+
+//     const dentists = await Dentist.find().lean();
+
+//     const dentistIds = dentists.map(d => d._id);
+
+//     const slots = await DentistSlot.find({
+//       dentistId: { $in: dentistIds },
+//       date: { $gte: start, $lte: end }
+//     }).lean();
+
+//     const slotMap = {};
+//     slots.forEach(s => {
+//       slotMap[s.dentistId.toString()] = s.slots;
+//     });
+
+//     const response = dentists.map(d => ({
+//       id: d._id,
+//       name: d.name,
+//       specialization: d.specialization,
+//       slots: (slotMap[d._id.toString()] || []).map(slot => ({
+//         time: slot.time,
+//         available: !slot.isBooked
+//       }))
+//     }));
+
+//     res.json({ success: true, data: response });
+
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal Server Error",
+//       error: err.message
+//     });
+//   }
+// };
+
 exports.getAvailableDentistsByDate = async (req, res) => {
   try {
     const { date } = req.query;
@@ -929,7 +980,6 @@ exports.getAvailableDentistsByDate = async (req, res) => {
       return res.status(400).json({ message: "Date is required" });
     }
 
-    // ✅ DATE RANGE (timezone-safe)
     const start = new Date(date);
     start.setHours(0, 0, 0, 0);
 
@@ -937,30 +987,36 @@ exports.getAvailableDentistsByDate = async (req, res) => {
     end.setHours(23, 59, 59, 999);
 
     const dentists = await Dentist.find().lean();
-
     const dentistIds = dentists.map(d => d._id);
 
-    const slots = await DentistSlot.find({
+    const slotsDocs = await DentistSlot.find({
       dentistId: { $in: dentistIds },
       date: { $gte: start, $lte: end }
     }).lean();
 
+    // 🗺 dentistId -> slots
     const slotMap = {};
-    slots.forEach(s => {
+    slotsDocs.forEach(s => {
       slotMap[s.dentistId.toString()] = s.slots;
     });
 
-    const response = dentists.map(d => ({
-      id: d._id,
-      name: d.name,
-      specialization: d.specialization,
-      slots: (slotMap[d._id.toString()] || []).map(slot => ({
-        time: slot.time,
-        available: !slot.isBooked
-      }))
-    }));
+    // ✅ FILTER dentists WITH slots only
+    const response = dentists
+      .filter(d => slotMap[d._id.toString()]?.length > 0)
+      .map(d => ({
+        id: d._id,
+        name: d.name,
+        specialization: d.specialization,
+        slots: slotMap[d._id.toString()].map(slot => ({
+          time: slot.time,
+          available: !slot.isBooked
+        }))
+      }));
 
-    res.json({ success: true, data: response });
+    res.json({
+      success: true,
+      data: response
+    });
 
   } catch (err) {
     console.error(err);
