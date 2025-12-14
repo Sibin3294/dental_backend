@@ -46,22 +46,59 @@ exports.markDentistAttendance = async (req, res) => {
 
 // GET /api/dentists/attendance?date=2025-12-13
 
+// exports.getDentistAttendanceByDate = async (req, res) => {
+//   try {
+//     const { adate } = req.body;
+
+//     if (!adate) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Date is required",
+//       });
+//     }
+
+//     const attendanceDate = new Date(adate);
+//     attendanceDate.setHours(0, 0, 0, 0);
+
+//     const records = await DentistAttendance.find({
+//       adate: attendanceDate,
+//     }).select("dentistId status remarks");
+
+//     res.json({
+//       success: true,
+//       data: records,
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to fetch attendance",
+//       error: error.message,
+//     });
+//   }
+// };
+
 exports.getDentistAttendanceByDate = async (req, res) => {
   try {
-    const { adate } = req.body;
+    const { date } = req.body;
 
-    if (!adate) {
+    if (!date) {
       return res.status(400).json({
         success: false,
         message: "Date is required",
       });
     }
 
-    const attendanceDate = new Date(adate);
-    attendanceDate.setHours(0, 0, 0, 0);
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
 
     const records = await DentistAttendance.find({
-      adate: attendanceDate,
+      date: {
+        $gte: start,
+        $lte: end,
+      },
     }).select("dentistId status remarks");
 
     res.json({
@@ -76,5 +113,6 @@ exports.getDentistAttendanceByDate = async (req, res) => {
     });
   }
 };
+
 
 
