@@ -1,5 +1,6 @@
 const Dentist = require("../models/Dentist");
 const DentistSlot = require("../models/DentistSlot");
+const DentistAttendance =require("../models/DentistAttendance");
 
 
 // get all dentist
