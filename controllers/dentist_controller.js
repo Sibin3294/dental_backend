@@ -876,8 +876,8 @@ exports.updateDentistSlots = async (req, res) => {
 //   }
 // };
 
-// const Dentist = require("../models/Dentist");
-// const DentistSlot = require("../models/DentistSlot");
+const Dentist = require("../models/Dentist");
+const DentistSlot = require("../models/DentistSlot");
 
 // exports.getAvailableDentistsByDate = async (req, res) => {
 //   try {
