@@ -876,40 +876,91 @@ exports.updateDentistSlots = async (req, res) => {
 //   }
 // };
 
-const Dentist = require("../models/Dentist");
-const DentistSlot = require("../models/DentistSlot");
+// const Dentist = require("../models/Dentist");
+// const DentistSlot = require("../models/DentistSlot");
+
+// exports.getAvailableDentistsByDate = async (req, res) => {
+//   try {
+//     if (!req.query.date) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Date is required"
+//       });
+//     }
+
+//     const startDate = new Date(req.query.date);
+//     startDate.setHours(0, 0, 0, 0);
+
+//     const endDate = new Date(startDate);
+//     endDate.setHours(23, 59, 59, 999);
+
+//     // 🔹 Fetch slots directly
+//     const dentistSlots = await DentistSlot.find({
+//       date: { $gte: startDate, $lte: endDate }
+//     }).populate("dentistId").lean();
+
+//     const result = dentistSlots
+//       .map(ds => ({
+//         dentist: ds.dentistId,
+//         slots: ds.slots.filter(s => !s.isBooked)
+//       }))
+//       .filter(d => d.slots.length > 0 && d.dentist);
+
+//     res.json({
+//       success: true,
+//       data: result
+//     });
+
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal Server Error",
+//       error: err.message
+//     });
+//   }
+// };
 
 exports.getAvailableDentistsByDate = async (req, res) => {
   try {
-    if (!req.query.date) {
-      return res.status(400).json({
-        success: false,
-        message: "Date is required"
-      });
+    const { date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({ message: "Date is required" });
     }
 
-    const startDate = new Date(req.query.date);
-    startDate.setHours(0, 0, 0, 0);
+    // ✅ DATE RANGE (timezone-safe)
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
 
-    const endDate = new Date(startDate);
-    endDate.setHours(23, 59, 59, 999);
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
 
-    // 🔹 Fetch slots directly
-    const dentistSlots = await DentistSlot.find({
-      date: { $gte: startDate, $lte: endDate }
-    }).populate("dentistId").lean();
+    const dentists = await Dentist.find().lean();
 
-    const result = dentistSlots
-      .map(ds => ({
-        dentist: ds.dentistId,
-        slots: ds.slots.filter(s => !s.isBooked)
-      }))
-      .filter(d => d.slots.length > 0 && d.dentist);
+    const dentistIds = dentists.map(d => d._id);
 
-    res.json({
-      success: true,
-      data: result
+    const slots = await DentistSlot.find({
+      dentistId: { $in: dentistIds },
+      date: { $gte: start, $lte: end }
+    }).lean();
+
+    const slotMap = {};
+    slots.forEach(s => {
+      slotMap[s.dentistId.toString()] = s.slots;
     });
+
+    const response = dentists.map(d => ({
+      id: d._id,
+      name: d.name,
+      specialization: d.specialization,
+      slots: (slotMap[d._id.toString()] || []).map(slot => ({
+        time: slot.time,
+        available: !slot.isBooked
+      }))
+    }));
+
+    res.json({ success: true, data: response });
 
   } catch (err) {
     console.error(err);
@@ -920,4 +971,5 @@ exports.getAvailableDentistsByDate = async (req, res) => {
     });
   }
 };
+
 
