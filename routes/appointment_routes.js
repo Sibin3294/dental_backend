@@ -6,10 +6,13 @@ const { updateAppointment } = require("../controllers/appointment_controller");
 const { deleteAppointment } = require("../controllers/appointment_controller");
 const {updateAppointmentStatus}= require("../controllers/appointment_controller");
 const {getPatientHistoryById} =require("../controllers/appointment_controller")
+const {createAppAppointment} =require("../controllers/appointment_controller")
+
 
 const router = express.Router();
 
 router.post("/createAppointment", createAppointment);
+router.post("/createAppAppointment", createAppAppointment);
 router.get("/getAppointments",getAppointments);
 router.get("/getAppointmentsByDate",getAppointmentsByDate)
 router.delete("/:id",deleteAppointment)
