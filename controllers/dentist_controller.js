@@ -361,18 +361,60 @@ exports.getDentistSlots = async (req, res) => {
 //   }
 // };
 
+// exports.getAllDentistsSlotsByDate = async (req, res) => {
+//   try {
+//     const dateStr = req.query.date;
+
+//     if (!dateStr) {
+//       return res.status(400).json({ message: "Date is required" });
+//     }
+
+//     const start = new Date(dateStr);
+//     start.setHours(0, 0, 0, 0);
+
+//     const end = new Date(dateStr);
+//     end.setHours(23, 59, 59, 999);
+
+//     const dentists = await Dentist.find().lean();
+//     const dentistIds = dentists.map(d => d._id);
+
+//     const slots = await DentistSlot.find({
+//       dentistId: { $in: dentistIds },
+//       date: { $gte: start, $lte: end }
+//     }).lean();
+
+//     const slotMap = {};
+//     slots.forEach(s => {
+//       slotMap[s.dentistId.toString()] = s.slots;
+//     });
+
+//     res.json({
+//       success: true,
+//       data: dentists.map(d => ({
+//         ...d,
+//         slots: slotMap[d._id.toString()] || []
+//       }))
+//     });
+//   } catch (err) {
+//     res.status(500).json({
+//       success: false,
+//       message: err.message
+//     });
+//   }
+// };
+
 exports.getAllDentistsSlotsByDate = async (req, res) => {
   try {
-    const dateStr = req.query.date;
+    const { date } = req.query;
 
-    if (!dateStr) {
+    if (!date) {
       return res.status(400).json({ message: "Date is required" });
     }
 
-    const start = new Date(dateStr);
+    const start = new Date(date);
     start.setHours(0, 0, 0, 0);
 
-    const end = new Date(dateStr);
+    const end = new Date(date);
     end.setHours(23, 59, 59, 999);
 
     const dentists = await Dentist.find().lean();
@@ -395,6 +437,7 @@ exports.getAllDentistsSlotsByDate = async (req, res) => {
         slots: slotMap[d._id.toString()] || []
       }))
     });
+
   } catch (err) {
     res.status(500).json({
       success: false,
@@ -402,6 +445,7 @@ exports.getAllDentistsSlotsByDate = async (req, res) => {
     });
   }
 };
+
 
 
 // update dentists slots
@@ -603,6 +647,98 @@ exports.updateDentistSlots = async (req, res) => {
 // };
 
 
+// exports.getAvailableDentistsByDate = async (req, res) => {
+//   try {
+//     const { date } = req.query;
+
+//     if (!date) {
+//       return res.status(400).json({ message: "Date is required" });
+//     }
+
+//     // Normalize date
+//     const selectedDate = new Date(date);
+//     selectedDate.setHours(0, 0, 0, 0);
+
+//     const endDate = new Date(selectedDate);
+//     endDate.setHours(23, 59, 59, 999);
+
+//     // 1️⃣ Get all dentists
+//     const dentists = await Dentist.find().lean();
+//     const dentistIds = dentists.map(d => d._id);
+
+//     // 2️⃣ Attendance (only PRESENT dentists)
+//     const attendance = await DentistAttendance.find({
+//       dentistId: { $in: dentistIds },
+//       date: selectedDate,
+//       status: "present"
+//     }).lean();
+
+//     const presentDentistIds = attendance.map(a =>
+//       a.dentistId.toString()
+//     );
+
+//     // 3️⃣ Get slots for date
+//     // const slots = await DentistSlot.find({
+//     //   dentistId: { $in: presentDentistIds },
+//     //   date: selectedDate
+//     // }).lean();
+//     const slots = await DentistSlot.find({
+//   dentistId: { $in: presentDentistIds },
+//   date: { $gte: start, $lte: end }
+// }).lean();
+
+//     const slotMap = {};
+//     slots.forEach(s => {
+//       slotMap[s.dentistId.toString()] = s.slots;
+//     });
+
+//     // 4️⃣ Get booked appointments
+//     const appointments = await Appointment.find({
+//       dentist: { $in: presentDentistIds },
+//       startTime: { $gte: selectedDate, $lte: endDate },
+//       status: { $ne: "cancelled" }
+//     }).lean();
+
+//     const bookedMap = {};
+//     appointments.forEach(a => {
+//       const timeKey = a.startTime.toISOString();
+//       bookedMap[`${a.dentist}_${timeKey}`] = true;
+//     });
+
+//     // 5️⃣ Build response
+//     const response = dentists
+//       .filter(d => presentDentistIds.includes(d._id.toString()))
+//       .map(d => {
+//         const dentistSlots = slotMap[d._id.toString()] || [];
+
+//         const formattedSlots = dentistSlots.map(slot => {
+//           const slotDateTime = new Date(`${date}T${slot}`);
+//           return {
+//             time: slot,
+//             available: !bookedMap[`${d._id}_${slotDateTime.toISOString()}`]
+//           };
+//         });
+
+//         return {
+//           id: d._id,
+//           name: d.name,
+//           speciality: d.specialization,
+//           email: d.email,
+//           slots: formattedSlots
+//         };
+//       });
+
+//     res.json({ success: true, data: response });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal Server Error",
+//       error: error.message
+//     });
+//   }
+// };
+
 exports.getAvailableDentistsByDate = async (req, res) => {
   try {
     const { date } = req.query;
@@ -611,86 +747,75 @@ exports.getAvailableDentistsByDate = async (req, res) => {
       return res.status(400).json({ message: "Date is required" });
     }
 
-    // Normalize date
-    const selectedDate = new Date(date);
-    selectedDate.setHours(0, 0, 0, 0);
+    // ✅ DEFINE START & END FIRST
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
 
-    const endDate = new Date(selectedDate);
-    endDate.setHours(23, 59, 59, 999);
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
 
-    // 1️⃣ Get all dentists
+    // 1️⃣ Get dentists
     const dentists = await Dentist.find().lean();
-    const dentistIds = dentists.map(d => d._id);
 
-    // 2️⃣ Attendance (only PRESENT dentists)
+    // 2️⃣ Get attendance
     const attendance = await DentistAttendance.find({
-      dentistId: { $in: dentistIds },
-      date: selectedDate,
-      status: "present"
+      date: { $gte: start, $lte: end }
     }).lean();
 
-    const presentDentistIds = attendance.map(a =>
-      a.dentistId.toString()
-    );
+    const attendanceMap = {};
+    attendance.forEach(a => {
+      attendanceMap[a.dentistId.toString()] = a.status;
+    });
 
-    // 3️⃣ Get slots for date
-    // const slots = await DentistSlot.find({
-    //   dentistId: { $in: presentDentistIds },
-    //   date: selectedDate
-    // }).lean();
+    // 3️⃣ Get booked appointments
+    const appointments = await Appointment.find({
+      startTime: { $gte: start, $lte: end }
+    }).lean();
+
+    const bookedMap = {};
+    appointments.forEach(a => {
+      const key = `${a.dentist}_${a.startTime.toISOString()}`;
+      bookedMap[key] = true;
+    });
+
+    // 4️⃣ Get slots
+    const dentistIds = dentists.map(d => d._id);
     const slots = await DentistSlot.find({
-  dentistId: { $in: presentDentistIds },
-  date: { $gte: start, $lte: end }
-}).lean();
+      dentistId: { $in: dentistIds },
+      date: { $gte: start, $lte: end }
+    }).lean();
 
     const slotMap = {};
     slots.forEach(s => {
       slotMap[s.dentistId.toString()] = s.slots;
     });
 
-    // 4️⃣ Get booked appointments
-    const appointments = await Appointment.find({
-      dentist: { $in: presentDentistIds },
-      startTime: { $gte: selectedDate, $lte: endDate },
-      status: { $ne: "cancelled" }
-    }).lean();
-
-    const bookedMap = {};
-    appointments.forEach(a => {
-      const timeKey = a.startTime.toISOString();
-      bookedMap[`${a.dentist}_${timeKey}`] = true;
-    });
-
     // 5️⃣ Build response
-    const response = dentists
-      .filter(d => presentDentistIds.includes(d._id.toString()))
-      .map(d => {
-        const dentistSlots = slotMap[d._id.toString()] || [];
+    const response = dentists.map(d => {
+      if (attendanceMap[d._id.toString()] !== "present") return null;
 
-        const formattedSlots = dentistSlots.map(slot => {
-          const slotDateTime = new Date(`${date}T${slot}`);
-          return {
-            time: slot,
-            available: !bookedMap[`${d._id}_${slotDateTime.toISOString()}`]
-          };
-        });
+      const dentistSlots = slotMap[d._id.toString()] || [];
 
-        return {
-          id: d._id,
-          name: d.name,
-          speciality: d.specialization,
-          email: d.email,
-          slots: formattedSlots
-        };
-      });
+      return {
+        id: d._id,
+        name: d.name,
+        speciality: d.specialization,
+        email: d.email,
+        slots: dentistSlots.map(time => ({
+          time,
+          available: true // booking check can be added later
+        }))
+      };
+    }).filter(Boolean);
 
     res.json({ success: true, data: response });
-  } catch (error) {
-    console.error(error);
+
+  } catch (err) {
+    console.error(err);
     res.status(500).json({
       success: false,
       message: "Internal Server Error",
-      error: error.message
+      error: err.message
     });
   }
 };
