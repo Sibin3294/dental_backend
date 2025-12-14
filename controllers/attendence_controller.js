@@ -45,24 +45,23 @@ exports.markDentistAttendance = async (req, res) => {
 };
 
 // GET /api/dentists/attendance?date=2025-12-13
-const DentistAttendance = require("../models/DentistAttendance");
 
 exports.getDentistAttendanceByDate = async (req, res) => {
   try {
-    const { date } = req.body;
+    const { adate } = req.body;
 
-    if (!date) {
+    if (!adate) {
       return res.status(400).json({
         success: false,
         message: "Date is required",
       });
     }
 
-    const attendanceDate = new Date(date);
+    const attendanceDate = new Date(adate);
     attendanceDate.setHours(0, 0, 0, 0);
 
     const records = await DentistAttendance.find({
-      date: attendanceDate,
+      adate: attendanceDate,
     }).select("dentistId status remarks");
 
     res.json({
