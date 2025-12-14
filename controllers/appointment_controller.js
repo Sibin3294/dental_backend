@@ -79,7 +79,6 @@ const User = require("../models/User");
 //   }
 // };
 
-const User = require("../models/User"); // <-- import your user model
 
 exports.createAppointment = async (req, res) => {
   try {
