@@ -488,73 +488,162 @@ exports.updateDentistSlots = async (req, res) => {
 //   res.json({ success: true, data: response });
 // };
 
+// exports.getAvailableDentistsByDate = async (req, res) => {
+//   try {
+//     const { date } = req.query;
+//     if (!date) return res.status(400).json({ message: "Date is required" });
+
+//     const start = new Date(date);
+//     start.setHours(0, 0, 0, 0);
+//     const end = new Date(date);
+//     end.setHours(23, 59, 59, 999);
+
+//     // 1️⃣ Get all dentists
+//     const dentists = await Dentist.find();
+
+//     // 2️⃣ Get attendance
+//     const attendance = await DentistAttendance.find({
+//       date: { $gte: start, $lte: end }
+//     });
+
+//     const attendanceMap = {};
+//     attendance.forEach(a => {
+//       attendanceMap[a.dentistId.toString()] = a.status;
+//     });
+
+//     // 3️⃣ Get booked appointments
+//     const appointments = await Appointment.find({
+//       startTime: { $gte: start, $lte: end }
+//     });
+
+//     const bookedMap = {};
+//     appointments.forEach(a => {
+//       if (!a.dentist) return;
+//       const key = `${a.dentist.toString()}_${a.startTime.toISOString()}`;
+//       bookedMap[key] = true;
+//     });
+
+//     // 4️⃣ Build response
+//     const response = dentists.map(d => {
+//       if (attendanceMap[d._id.toString()] !== "present") return null;
+
+//       // Use default slots (example: 10AM, 11AM, 2PM, 4PM)
+//       const slotsArray = ["10:00", "11:00", "14:00", "16:00"];
+
+//       const slots = slotsArray.map(time => {
+//         // Convert time to ISO for checking booked appointments
+//         const [hour, minute] = time.split(":").map(Number);
+//         const slotDate = new Date(start);
+//         slotDate.setHours(hour, minute, 0, 0);
+//         const key = `${d._id.toString()}_${slotDate.toISOString()}`;
+
+//         return {
+//           time,
+//           available: !bookedMap[key]
+//         };
+//       });
+
+//       return {
+//         id: d._id,
+//         name: d.name,
+//         speciality: d.specialization,
+//         email: d.email,
+//         slots
+//       };
+//     }).filter(Boolean);
+
+//     res.json({ success: true, data: response });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ success: false, message: "Internal Server Error", error: error.message });
+//   }
+// };
+
+
 exports.getAvailableDentistsByDate = async (req, res) => {
   try {
     const { date } = req.query;
-    if (!date) return res.status(400).json({ message: "Date is required" });
 
-    const start = new Date(date);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(date);
-    end.setHours(23, 59, 59, 999);
+    if (!date) {
+      return res.status(400).json({ message: "Date is required" });
+    }
+
+    // Normalize date
+    const selectedDate = new Date(date);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(selectedDate);
+    endDate.setHours(23, 59, 59, 999);
 
     // 1️⃣ Get all dentists
-    const dentists = await Dentist.find();
+    const dentists = await Dentist.find().lean();
+    const dentistIds = dentists.map(d => d._id);
 
-    // 2️⃣ Get attendance
+    // 2️⃣ Attendance (only PRESENT dentists)
     const attendance = await DentistAttendance.find({
-      date: { $gte: start, $lte: end }
+      dentistId: { $in: dentistIds },
+      date: selectedDate,
+      status: "present"
+    }).lean();
+
+    const presentDentistIds = attendance.map(a =>
+      a.dentistId.toString()
+    );
+
+    // 3️⃣ Get slots for date
+    const slots = await DentistSlot.find({
+      dentistId: { $in: presentDentistIds },
+      date: selectedDate
+    }).lean();
+
+    const slotMap = {};
+    slots.forEach(s => {
+      slotMap[s.dentistId.toString()] = s.slots;
     });
 
-    const attendanceMap = {};
-    attendance.forEach(a => {
-      attendanceMap[a.dentistId.toString()] = a.status;
-    });
-
-    // 3️⃣ Get booked appointments
+    // 4️⃣ Get booked appointments
     const appointments = await Appointment.find({
-      startTime: { $gte: start, $lte: end }
-    });
+      dentist: { $in: presentDentistIds },
+      startTime: { $gte: selectedDate, $lte: endDate },
+      status: { $ne: "cancelled" }
+    }).lean();
 
     const bookedMap = {};
     appointments.forEach(a => {
-      if (!a.dentist) return;
-      const key = `${a.dentist.toString()}_${a.startTime.toISOString()}`;
-      bookedMap[key] = true;
+      const timeKey = a.startTime.toISOString();
+      bookedMap[`${a.dentist}_${timeKey}`] = true;
     });
 
-    // 4️⃣ Build response
-    const response = dentists.map(d => {
-      if (attendanceMap[d._id.toString()] !== "present") return null;
+    // 5️⃣ Build response
+    const response = dentists
+      .filter(d => presentDentistIds.includes(d._id.toString()))
+      .map(d => {
+        const dentistSlots = slotMap[d._id.toString()] || [];
 
-      // Use default slots (example: 10AM, 11AM, 2PM, 4PM)
-      const slotsArray = ["10:00", "11:00", "14:00", "16:00"];
-
-      const slots = slotsArray.map(time => {
-        // Convert time to ISO for checking booked appointments
-        const [hour, minute] = time.split(":").map(Number);
-        const slotDate = new Date(start);
-        slotDate.setHours(hour, minute, 0, 0);
-        const key = `${d._id.toString()}_${slotDate.toISOString()}`;
+        const formattedSlots = dentistSlots.map(slot => {
+          const slotDateTime = new Date(`${date}T${slot}`);
+          return {
+            time: slot,
+            available: !bookedMap[`${d._id}_${slotDateTime.toISOString()}`]
+          };
+        });
 
         return {
-          time,
-          available: !bookedMap[key]
+          id: d._id,
+          name: d.name,
+          speciality: d.specialization,
+          email: d.email,
+          slots: formattedSlots
         };
       });
-
-      return {
-        id: d._id,
-        name: d.name,
-        speciality: d.specialization,
-        email: d.email,
-        slots
-      };
-    }).filter(Boolean);
 
     res.json({ success: true, data: response });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: "Internal Server Error", error: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message
+    });
   }
 };
