@@ -328,20 +328,59 @@ exports.getDentistSlots = async (req, res) => {
 
 // get dentist slots by date
 
+// exports.getAllDentistsSlotsByDate = async (req, res) => {
+//   try {
+//     const date = req.query.date
+//       ? new Date(req.query.date)
+//       : new Date();
+
+//     date.setHours(0, 0, 0, 0);
+
+//     const dentists = await Dentist.find().lean();
+//     const dentistIds = dentists.map(d => d._id);
+
+//     const slots = await DentistSlot.find({
+//       dentistId: { $in: dentistIds },
+//       date
+//     }).lean();
+
+//     const slotMap = {};
+//     slots.forEach(s => {
+//       slotMap[s.dentistId.toString()] = s.slots;
+//     });
+
+//     res.json({
+//       success: true,
+//       data: dentists.map(d => ({
+//         ...d,
+//         slots: slotMap[d._id.toString()] || []
+//       }))
+//     });
+//   } catch (err) {
+//     res.status(500).json({ success: false, message: err.message });
+//   }
+// };
+
 exports.getAllDentistsSlotsByDate = async (req, res) => {
   try {
-    const date = req.query.date
-      ? new Date(req.query.date)
-      : new Date();
+    const dateStr = req.query.date;
 
-    date.setHours(0, 0, 0, 0);
+    if (!dateStr) {
+      return res.status(400).json({ message: "Date is required" });
+    }
+
+    const start = new Date(dateStr);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(dateStr);
+    end.setHours(23, 59, 59, 999);
 
     const dentists = await Dentist.find().lean();
     const dentistIds = dentists.map(d => d._id);
 
     const slots = await DentistSlot.find({
       dentistId: { $in: dentistIds },
-      date
+      date: { $gte: start, $lte: end }
     }).lean();
 
     const slotMap = {};
@@ -357,9 +396,13 @@ exports.getAllDentistsSlotsByDate = async (req, res) => {
       }))
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
+
 
 // update dentists slots
 
@@ -591,10 +634,14 @@ exports.getAvailableDentistsByDate = async (req, res) => {
     );
 
     // 3️⃣ Get slots for date
+    // const slots = await DentistSlot.find({
+    //   dentistId: { $in: presentDentistIds },
+    //   date: selectedDate
+    // }).lean();
     const slots = await DentistSlot.find({
-      dentistId: { $in: presentDentistIds },
-      date: selectedDate
-    }).lean();
+  dentistId: { $in: presentDentistIds },
+  date: { $gte: start, $lte: end }
+}).lean();
 
     const slotMap = {};
     slots.forEach(s => {
