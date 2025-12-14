@@ -43,3 +43,31 @@ exports.markDentistAttendance = async (req, res) => {
     });
   }
 };
+
+// GET /api/dentists/attendance?date=2025-12-13
+exports.getDentistAttendanceByDate = async (req, res) => {
+  try {
+    const { date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({ message: "Date is required" });
+    }
+
+    const attendanceDate = new Date(date);
+    attendanceDate.setHours(0, 0, 0, 0);
+
+    const records = await DentistAttendance.find({ date: attendanceDate });
+
+    res.json({
+      success: true,
+      data: records,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch attendance",
+      error: error.message,
+    });
+  }
+};
+
