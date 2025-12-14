@@ -1,5 +1,7 @@
 const Dentist = require("../models/Dentist");
 const Appointment = require("../models/Appointment");
+const DentistSlot = require("../models/DentistSlot");
+const User = require("../models/User");
 
 // exports.createAppointment = async (req, res) => {
 //   try {
@@ -378,6 +380,140 @@ exports.getPatientHistoryById = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: e.message
+    });
+  }
+};
+
+// appointment booking from app
+
+exports.createAppAppointment = async (req, res) => {
+  try {
+    const {
+      patientId,
+      reason,
+      dentist,   // dentistId
+      date,      // "2025-12-21"
+      slotTime   // "10:00 AM"
+    } = req.body;
+
+    // -----------------------------
+    // BASIC VALIDATION
+    // -----------------------------
+    if (!patientId || !reason || !dentist || !date || !slotTime) {
+      return res.status(400).json({
+        success: false,
+        message: "patientId, reason, dentist, date and slotTime are required"
+      });
+    }
+
+    // Normalize date (important!)
+    const bookingDate = new Date(date);
+    bookingDate.setHours(0, 0, 0, 0);
+
+    // -----------------------------
+    // VALIDATE PATIENT
+    // -----------------------------
+    const patient = await User.findById(patientId);
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        message: "Patient does not exist"
+      });
+    }
+
+    // -----------------------------
+    // VALIDATE DENTIST
+    // -----------------------------
+    const dentistExists = await Dentist.findById(dentist);
+    if (!dentistExists) {
+      return res.status(404).json({
+        success: false,
+        message: "Dentist does not exist"
+      });
+    }
+
+    // -----------------------------
+    // FIND SLOT DOCUMENT
+    // -----------------------------
+    const slotDoc = await DentistSlot.findOne({
+      dentistId: dentist,
+      date: bookingDate
+    });
+
+    if (!slotDoc) {
+      return res.status(400).json({
+        success: false,
+        message: "No slots found for this dentist on selected date"
+      });
+    }
+
+    // -----------------------------
+    // FIND SPECIFIC SLOT
+    // -----------------------------
+    const slotIndex = slotDoc.slots.findIndex(
+      s => s.time === slotTime
+    );
+
+    if (slotIndex === -1) {
+      return res.status(400).json({
+        success: false,
+        message: "Selected slot does not exist"
+      });
+    }
+
+    if (slotDoc.slots[slotIndex].isBooked) {
+      return res.status(400).json({
+        success: false,
+        message: "This slot is already booked"
+      });
+    }
+
+    // -----------------------------
+    // CREATE START & END TIME
+    // -----------------------------
+    const startTime = new Date(`${date} ${slotTime}`);
+    const endTime = new Date(startTime.getTime() + 30 * 60 * 1000); // 30 mins
+
+    // -----------------------------
+    // CREATE APPOINTMENT
+    // -----------------------------
+    const appointment = await Appointment.create({
+      patientId,
+      mobile: patient.mobile,
+      reason,
+      dentist,
+      startTime,
+      endTime,
+      status: "scheduled",
+      paymentStatus: "pending"
+    });
+
+    // -----------------------------
+    // MARK SLOT AS BOOKED
+    // -----------------------------
+    slotDoc.slots[slotIndex].isBooked = true;
+    slotDoc.slots[slotIndex].bookedBy = patientId;
+
+    await slotDoc.save();
+
+    // -----------------------------
+    // POPULATE RESPONSE
+    // -----------------------------
+    const populatedAppointment = await Appointment.findById(appointment._id)
+      .populate("dentist")
+      .populate("patientId");
+
+    return res.json({
+      success: true,
+      message: "Appointment booked successfully",
+      data: populatedAppointment
+    });
+
+  } catch (error) {
+    console.error("Create Appointment Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message
     });
   }
 };
