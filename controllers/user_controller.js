@@ -14,6 +14,56 @@ exports.getAllPatients = async (req, res) => {
 };
 
 // Add More Info of patients
+// exports.addMorePatientInfo = async (req, res) => {
+//   try {
+//     const { userId } = req.body;
+
+//     if (!userId) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "userId is required",
+//       });
+//     }
+
+//     const updateData = {
+//       phone: req.body.phone,
+//       address: req.body.address,
+//       gender: req.body.gender,
+//       dob: req.body.dob,
+//       bloodGroup: req.body.bloodGroup,
+//       weight: req.body.weight,
+//       height: req.body.height,
+//       lastVisitDate: req.body.lastVisitDate,
+//     };
+
+//     const updatedPatient = await User.findByIdAndUpdate(
+//       userId,
+//       updateData,
+//       { new: true }
+//     );
+
+//     if (!updatedPatient) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "User not found",
+//       });
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "More patient information added successfully",
+//       data: updatedPatient,
+//     });
+
+//   } catch (error) {
+//     console.error("Add More Info Error:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal Server Error",
+//     });
+//   }
+// };
+
 exports.addMorePatientInfo = async (req, res) => {
   try {
     const { userId } = req.body;
@@ -29,11 +79,11 @@ exports.addMorePatientInfo = async (req, res) => {
       phone: req.body.phone,
       address: req.body.address,
       gender: req.body.gender,
-      dob: req.body.dob,
+      dob: parseDDMMYYYY(req.body.dob),
       bloodGroup: req.body.bloodGroup,
       weight: req.body.weight,
       height: req.body.height,
-      lastVisitDate: req.body.lastVisitDate,
+      lastVisitDate: parseDDMMYYYY(req.body.lastVisitDate),
     };
 
     const updatedPatient = await User.findByIdAndUpdate(
@@ -63,6 +113,14 @@ exports.addMorePatientInfo = async (req, res) => {
     });
   }
 };
+
+const parseDDMMYYYY = (dateStr) => {
+  if (!dateStr) return null;
+
+  const [day, month, year] = dateStr.split("-");
+  return new Date(`${year}-${month}-${day}`);
+};
+
 
 // delete patient
 
