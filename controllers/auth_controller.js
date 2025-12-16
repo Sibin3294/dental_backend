@@ -17,6 +17,38 @@ const { sendWelcomeEmail } = require("../utils/emailService");
 // };
 
 
+// exports.register = async (req, res) => {
+//   try {
+//     console.log("register api hit");
+
+//     const { name, email, password } = req.body;
+
+//     const hashed = await bcrypt.hash(password, 10);
+
+//     const user = new User({
+//       name,
+//       email,
+//       password: hashed,
+//     });
+
+//     await user.save();
+
+//     // 🔥 Send welcome email
+//     sendWelcomeEmail(user); // non-blocking
+
+//     return res.status(201).json({
+//       success: true,
+//       message: "User registered successfully",
+//     });
+//   } catch (error) {
+//     console.error("Register error:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Registration failed",
+//     });
+//   }
+// };
+
 exports.register = async (req, res) => {
   try {
     console.log("register api hit");
@@ -25,24 +57,30 @@ exports.register = async (req, res) => {
 
     const hashed = await bcrypt.hash(password, 10);
 
-    const user = new User({
-      name,
-      email,
-      password: hashed,
-    });
-
+    const user = new User({ name, email, password: hashed });
     await user.save();
 
-    // 🔥 Send welcome email
-    sendWelcomeEmail(user); // non-blocking
-
-    return res.status(201).json({
-      success: true,
-      message: "User registered successfully",
+    // 🔔 SEND WELCOME EMAIL
+    await sendEmail({
+      to: email,
+      subject: "Welcome to Dental Care 🦷",
+      html: `
+        <h2>Hello ${name},</h2>
+        <p>Welcome to <b>Dental Care</b>.</p>
+        <p>Your account has been created successfully.</p>
+        <br/>
+        <p>🦷 Stay healthy,<br/>Dental Care Team</p>
+      `,
     });
+
+    res.status(201).json({
+      success: true,
+      message: "User registered & email sent",
+    });
+
   } catch (error) {
     console.error("Register error:", error);
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       message: "Registration failed",
     });
