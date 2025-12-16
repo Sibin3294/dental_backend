@@ -32,6 +32,8 @@ exports.sendEmail = async ({ to, subject, html }) => {
  * Welcome email template
  */
 exports.sendWelcomeEmail = async (user) => {
+    console.log("user.email");
+    console.log(user.email);
   const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px;">
       <h2 style="color:#1A73E8;">Welcome to Dental App 🦷</h2>
