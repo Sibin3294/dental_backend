@@ -1,8 +1,7 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-// const { sendWelcomeEmail } = require("../utils/emailService");
-const { sendEmail } = require("../utils/emailService");
+const { sendWelcomeEmail } = require("../utils/emailService");
 
 
 // exports.register = async (req, res) => {
@@ -52,36 +51,33 @@ const { sendEmail } = require("../utils/emailService");
 
 exports.register = async (req, res) => {
   try {
-    console.log("register api hit");
+    console.log("✅ register api hit");
 
     const { name, email, password } = req.body;
 
+    // hash password
     const hashed = await bcrypt.hash(password, 10);
 
-    const user = new User({ name, email, password: hashed });
-    await user.save();
-
-    // 🔔 SEND WELCOME EMAIL
-    await sendEmail({
-      to: email,
-      subject: "Welcome to Dental Care 🦷",
-      html: `
-        <h2>Hello ${name},</h2>
-        <p>Welcome to <b>Dental Care</b>.</p>
-        <p>Your account has been created successfully.</p>
-        <br/>
-        <p>🦷 Stay healthy,<br/>Dental Care Team</p>
-      `,
+    // save user
+    const user = await User.create({
+      name,
+      email,
+      password: hashed,
     });
 
-    res.status(201).json({
+    // send email (NON-BLOCKING SAFE)
+    sendWelcomeEmail(user)
+      .then(() => console.log("✅ Welcome email queued"))
+      .catch(err => console.error("❌ Email failed:", err));
+
+    return res.status(201).json({
       success: true,
-      message: "User registered & email sent",
+      message: "User registered successfully",
     });
 
   } catch (error) {
-    console.error("Register error:", error);
-    res.status(500).json({
+    console.error("❌ Register error:", error);
+    return res.status(500).json({
       success: false,
       message: "Registration failed",
     });
