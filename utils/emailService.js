@@ -39,9 +39,9 @@ const sendEmail = async ({ to, subject, html }) => {
  */
 const sendWelcomeEmail = async (user) => {
     console.log("user");
-    console.log(user.EMAIL_PASSWORD);
+    console.log(process.env.EMAIL_USER);
     console.log(user.email);
-    console.log(user.EMAIL_USER);
+    console.log(process.env.EMAIL_PASSWORD);
   const html = `
     <div style="font-family: Arial; padding: 20px;">
       <h2 style="color:#1A73E8;">Welcome to Dental App 🦷</h2>
