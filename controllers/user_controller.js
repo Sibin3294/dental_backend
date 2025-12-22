@@ -299,3 +299,14 @@ exports.editUserProfile = async (req, res) => {
     });
   }
 };
+
+// save FCM token
+
+exports.saveFcmToken = async (req, res) => {
+  const { userId, fcmToken } = req.body;
+
+  await User.findByIdAndUpdate(userId, { fcmToken });
+
+  res.json({ success: true });
+};
+

@@ -14,91 +14,53 @@ exports.getAllDentists = async (req, res) => {
   }
 };
 
-// exports.getAllDentists = async (req, res) => {
+// add new dentist without push notification
+// exports.addDentist = async (req, res) => {
 //   try {
-//     const date = req.query.date ? new Date(req.query.date) : new Date();
+//     const { name, specialization, image, experience, qualification } = req.body;
 
-//     const startOfDay = new Date(date);
-//     startOfDay.setHours(0, 0, 0, 0);
+//     // Validate required fields
+//     if (!name || !specialization) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Name and specialization are required",
+//       });
+//     }
 
-//     const endOfDay = new Date(date);
-//     endOfDay.setHours(23, 59, 59, 999);
-
-//     const dentists = await Dentist.find().lean();
-//     const dentistIds = dentists.map(d => d._id);
-
-//     const slots = await DentistSlot.find({
-//       dentistId: { $in: dentistIds },
-//       date: { $gte: startOfDay, $lte: endOfDay }
-//     }).lean();
-
-//     const slotMap = {};
-//     slots.forEach(s => {
-//       slotMap[s.dentistId.toString()] = s.slots;
+//     // Create new dentist
+//     const newDentist = new Dentist({
+//       name,
+//       specialization,
+//       image: image || "",
+//       experience: experience || "",
+//       qualification: qualification || "",
 //     });
 
-//     res.json({
+//     const savedDentist = await newDentist.save();
+
+//     return res.status(200).json({
 //       success: true,
-//       data: dentists.map(d => ({
-//         ...d,
-//         slots: slotMap[d._id.toString()] || []
-//       }))
+//       message: "Dentist added successfully",
+//       data: savedDentist,
 //     });
-//   } catch (err) {
-//     res.status(500).json({ success: false, message: err.message });
-//   }
-// };
-
-// exports.getAllDentists = async (req, res) => {
-//   try {
-//     const date = req.query.date
-//       ? new Date(req.query.date)
-//       : new Date();
-
-//     date.setHours(0, 0, 0, 0);
-
-//     const dentists = await Dentist.find().lean();
-
-//     const dentistIds = dentists.map(d => d._id);
-
-//     const slots = await DentistSlot.find({
-//       dentistId: { $in: dentistIds },
-//       date
-//     }).lean();
-
-//     const slotMap = {};
-//     slots.forEach(s => {
-//       slotMap[s.dentistId.toString()] = s.slots;
-//     });
-
-//     const response = dentists.map(dentist => ({
-//       ...dentist,
-//       slots: slotMap[dentist._id.toString()] || []
-//     }));
-
-//     res.json({
-//       success: true,
-//       date,
-//       data: response
-//     });
-
-//   } catch (err) {
-//     res.status(500).json({
+//   } catch (error) {
+//     console.error("Add Dentist Error:", error);
+//     return res.status(500).json({
 //       success: false,
-//       message: err.message
+//       message: "Internal Server Error",
 //     });
 //   }
 // };
 
+// add new dentist with push notification
 
-
-// add new dentist
+const { sendPushToMany } = require("../utils/pushNotification");
+const User = require("../models/User");
 
 exports.addDentist = async (req, res) => {
   try {
     const { name, specialization, image, experience, qualification } = req.body;
 
-    // Validate required fields
     if (!name || !specialization) {
       return res.status(400).json({
         success: false,
@@ -106,7 +68,6 @@ exports.addDentist = async (req, res) => {
       });
     }
 
-    // Create new dentist
     const newDentist = new Dentist({
       name,
       specialization,
@@ -117,11 +78,27 @@ exports.addDentist = async (req, res) => {
 
     const savedDentist = await newDentist.save();
 
+    // 🔔 SEND PUSH TO ALL USERS
+    const users = await User.find({ fcmToken: { $ne: "" } }).select("fcmToken");
+
+    const tokens = users.map(u => u.fcmToken);
+
+    await sendPushToMany(
+      tokens,
+      "🦷 New Dentist Joined!",
+      `Dr. ${name} (${specialization}) is now available for appointments`,
+      {
+        dentistId: savedDentist._id.toString(),
+        type: "NEW_DENTIST",
+      }
+    );
+
     return res.status(200).json({
       success: true,
-      message: "Dentist added successfully",
+      message: "Dentist added & notification sent",
       data: savedDentist,
     });
+
   } catch (error) {
     console.error("Add Dentist Error:", error);
     return res.status(500).json({
@@ -130,6 +107,7 @@ exports.addDentist = async (req, res) => {
     });
   }
 };
+
 
 
 // Add More Info to Dentist
