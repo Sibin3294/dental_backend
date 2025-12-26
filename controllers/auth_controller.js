@@ -99,8 +99,11 @@ exports.login = async (req, res) => {
 };
 
 exports.saveFcmToken = async (req, res) => {
+ 
   const { userId, fcmToken } = req.body;
-
+ console.log("user id and fcmtoken");
+  console.log(userId);
+  console.log(fcmToken);
   await User.findByIdAndUpdate(userId, { fcmToken });
 
   res.json({ success: true });
