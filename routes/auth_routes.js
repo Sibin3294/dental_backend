@@ -1,8 +1,10 @@
 const express = require("express");
-const { register, login } = require("../controllers/auth_controller");
+const { register, login,saveFcmToken } = require("../controllers/auth_controller");
 const router = express.Router();
 
 router.post("/register", register);
 router.post("/login", login);
+router.post("/saveFcmToken",saveFcmToken);
+
 
 module.exports = router;

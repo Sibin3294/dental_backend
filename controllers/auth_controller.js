@@ -97,3 +97,11 @@ exports.login = async (req, res) => {
 
   res.json({ token, user });
 };
+
+exports.saveFcmToken = async (req, res) => {
+  const { userId, fcmToken } = req.body;
+
+  await User.findByIdAndUpdate(userId, { fcmToken });
+
+  res.json({ success: true });
+};
