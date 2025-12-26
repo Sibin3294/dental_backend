@@ -1,7 +1,6 @@
-// config/firebaseAdmin.js
 const admin = require("firebase-admin");
 
-// Parse service account JSON from Render env variable
+// FIREBASE_SERVICE_ACCOUNT is stored in Render Environment Variables
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 // Initialize only once
