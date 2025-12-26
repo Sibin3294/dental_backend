@@ -13,6 +13,10 @@ const UserSchema = new mongoose.Schema({
   weight : { type: String },
   height: { type: String },
   lastVisitDate: { type: String },
+  fcmToken: {
+    type: String,
+    default: null,
+  },
 });
 
 module.exports = mongoose.model("User", UserSchema);
