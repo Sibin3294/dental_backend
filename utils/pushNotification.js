@@ -1,6 +1,7 @@
 const admin = require("../config/firebaseAdmin");
 
 exports.sendPushToMany = async (tokens, title, body, data = {}) => {
+    console.log("reached here");
   if (!tokens || !tokens.length) return;
 
   const message = {

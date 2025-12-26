@@ -170,6 +170,8 @@ exports.createAppointment = async (req, res) => {
 
  // 🔔 Send push to patient only
     if (patient.fcmToken) {
+      console.log("patient.fcmToken");
+      console.log(patient.fcmToken);
       await sendPushToMany(
         [patient.fcmToken],
         "✅ Appointment Confirmed",
