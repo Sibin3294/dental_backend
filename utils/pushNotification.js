@@ -1,4 +1,4 @@
-import admin from "../config/firebaseAdmin"; // the file from step 2
+import admin from "../config/firebaseAdmin.js"; // the file from step 2
 
 exports.sendPushToMany = async (tokens, title, body, data = {}) => {
   if (!tokens.length) return;
