@@ -166,6 +166,21 @@ exports.createAppointment = async (req, res) => {
   { path: "patientId" }
 ]);
 
+ // 🔔 Send push to patient only
+    if (patient.fcmToken) {
+      await sendPushToMany(
+        [patient.fcmToken],
+        "✅ Appointment Confirmed",
+        `Your appointment with Dr. ${dentistExists.name} is confirmed`,
+        {
+          type: "APPOINTMENT_CONFIRMED",
+          appointmentId: appointment._id.toString(),
+          startTime,
+          endTime,
+        }
+      );
+    }
+
 
     return res.json({
       success: true,
