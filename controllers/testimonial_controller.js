@@ -1,5 +1,7 @@
 const Testimonial = require("../models/Testimonial");
 const User = require("../models/User");
+const { sendPushToMany } = require("../utils/pushNotification");
+
 
 // Create testimonial
 exports.createTestimonial = async (req, res) => {
@@ -29,6 +31,27 @@ exports.createTestimonial = async (req, res) => {
       message,
       rating
     });
+
+     // 3️⃣ Get all users EXCEPT testimonial creator & with valid FCM tokens
+    const users = await User.find({
+      _id: { $ne: userId },              // ❌ exclude creator
+      fcmToken: { $exists: true, $ne: "" }
+    }).select("fcmToken");
+
+    const tokens = users.map(u => u.fcmToken);
+
+    // 4️⃣ Send push notification
+    if (tokens.length > 0) {
+      await sendPushToMany(
+        tokens,
+        "🦷 New review added!",
+        `${user.name} added a new review`,
+        {
+          type: "NEW_TESTIMONIAL",
+          testimonialId: testimonial._id.toString(),
+        }
+      );
+    }
 
     res.status(201).json({
       status: true,
