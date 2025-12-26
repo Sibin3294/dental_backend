@@ -2,6 +2,8 @@ const Dentist = require("../models/Dentist");
 const Appointment = require("../models/Appointment");
 const DentistSlot = require("../models/DentistSlot");
 const User = require("../models/User");
+const { sendPushToMany } = require("../utils/pushNotification");
+
 
 // exports.createAppointment = async (req, res) => {
 //   try {
