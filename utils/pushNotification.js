@@ -1,8 +1,8 @@
-import { messaging } from "../config/firebaseAdmin.js";
+import admin from "../config/firebaseAdmin.js";
 
 
 
-export async function sendPushToMany(tokens, title, body, data = {}) {
+exports.sendPushToMany = async (tokens, title, body, data = {}) => {
   if (!tokens.length) return;
 
   const message = {
@@ -14,5 +14,5 @@ export async function sendPushToMany(tokens, title, body, data = {}) {
     tokens,
   };
 
-  await messaging().sendMulticast(message);
-}
+  await admin.messaging().sendMulticast(message);
+};
