@@ -531,9 +531,9 @@ exports.createAppAppointment = async (req, res) => {
         `Your appointment with Dr. ${dentistExists.name} is confirmed`,
         {
           type: "APPOINTMENT_CONFIRMED",
-          appointmentId: appointment._id.toString(),
-          startTime,
-          endTime,
+          // appointmentId: appointment._id.toString(),
+          // startTime,
+          // endTime,
         }
       );
     }
