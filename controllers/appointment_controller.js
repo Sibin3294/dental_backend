@@ -521,6 +521,24 @@ exports.createAppAppointment = async (req, res) => {
       .populate("dentist")
       .populate("patientId");
 
+       // 🔔 Send push to patient only
+    if (patient.fcmToken) {
+      console.log("patient.fcmToken");
+      console.log(patient.fcmToken);
+      await sendPushToMany(
+        [patient.fcmToken],
+        "✅ Appointment Confirmed",
+        `Your appointment with Dr. ${dentistExists.name} is confirmed`,
+        {
+          type: "APPOINTMENT_CONFIRMED",
+          appointmentId: appt._id.toString(),
+          startTime,
+          endTime,
+        }
+      );
+    }
+
+
     return res.json({
       success: true,
       message: "Appointment booked successfully",
