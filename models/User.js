@@ -10,15 +10,19 @@ const UserSchema = new mongoose.Schema({
   gender: { type: String },
   dob: { type: String },
   bloodGroup: { type: String },
-  weight : { type: String },
+  weight: { type: String },
   height: { type: String },
   lastVisitDate: { type: String },
   fcmToken: {
     type: String,
     default: null,
   },
+  resetPasswordToken: {
+    type: String,
+  },
+  resetPasswordExpires: {
+    type: Date,
+  },
 });
 
 module.exports = mongoose.model("User", UserSchema);
-
-
