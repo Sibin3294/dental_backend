@@ -52,12 +52,8 @@ exports.addServiceVideo = async (req, res) => {
     
         await sendPushToMany(
           tokens,
-          "🦷 New Dentist Joined!",
-          `Dr. ${name} (${specialization}) is now available for appointments`,
-          {
-            dentistId: savedDentist._id.toString(),
-            type: "NEW_DENTIST",
-          }
+        "🦷 New dental video added!",
+        title
         );
     }
 
