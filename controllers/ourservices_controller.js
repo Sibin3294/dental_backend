@@ -1,4 +1,4 @@
-const ServiceVideo = require("../models/ServiceVideo");
+const ServiceVideo = require("../models/OurServices");
 
 exports.addServiceVideo = async (req, res) => {
   try {
