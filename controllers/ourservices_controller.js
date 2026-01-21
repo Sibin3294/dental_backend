@@ -1,4 +1,6 @@
 const ServiceVideo = require("../models/OurServices");
+const { sendPushToMany } = require("../utils/pushNotification");
+const User = require("../models/User");
 
 exports.addServiceVideo = async (req, res) => {
   try {
@@ -44,13 +46,23 @@ exports.addServiceVideo = async (req, res) => {
     });
 
     if (notifyUsers) {
-      const tokens = await getAllActiveUserTokens();
-      await sendPushToMany(
-        tokens,
-        "🦷 New dental video added!",
-        title
-      );
+     const users = await User.find({ fcmToken: { $ne: "" } }).select("fcmToken");
+    
+        const tokens = users.map(u => u.fcmToken);
+    
+        await sendPushToMany(
+          tokens,
+          "🦷 New Dentist Joined!",
+          `Dr. ${name} (${specialization}) is now available for appointments`,
+          {
+            dentistId: savedDentist._id.toString(),
+            type: "NEW_DENTIST",
+          }
+        );
     }
+
+    // 🔔 SEND PUSH TO ALL USERS
+        
 
     return res.status(201).json({
       success: true,
