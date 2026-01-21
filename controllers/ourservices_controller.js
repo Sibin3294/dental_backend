@@ -39,7 +39,7 @@ exports.addServiceVideo = async (req, res) => {
       language,
       duration,
       clinicId,
-      uploadedBy: req.user._id, // admin / dentist
+    //   uploadedBy: req.user._id, // admin / dentist
       notifyUsers,
     });
 
