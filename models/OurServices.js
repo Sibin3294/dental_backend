@@ -3,10 +3,11 @@ const mongoose = require("mongoose");
 const ServiceVideoSchema = new mongoose.Schema(
   {
     serviceId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Service",
+    //   type: mongoose.Schema.Types.ObjectId,
+      type: String,
+    //   ref: "Service",
       required: true,
-      index: true,
+    //   index: true,
     },
 
     title: {
@@ -70,16 +71,18 @@ const ServiceVideoSchema = new mongoose.Schema(
     },
 
     clinicId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Clinic",
-      required: true,
+    //   type: mongoose.Schema.Types.ObjectId,
+    type:String,
+    //   ref: "Clinic",
+      required: false,
       index: true,
     },
 
     uploadedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // admin / dentist
-      required: true,
+    //   type: mongoose.Schema.Types.ObjectId,
+    type:String,
+    //   ref: "User", // admin / dentist
+      required: false,
     },
 
     notifyUsers: {
