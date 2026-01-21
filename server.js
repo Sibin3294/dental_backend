@@ -69,6 +69,7 @@ app.use("/api/appointments", require("./routes/appointment_routes"));
 app.use("/api/payments", require("./routes/payment_routes"));
 app.use("/api/testimonials", require("./routes/testimonial_routes"));
 app.use("/api/attendance", require("./routes/attendence_routes"));
+app.use("/api/ourservices", require("./routes/ourservices_routes"));
 
 
 app.get("/", (req, res) => {
