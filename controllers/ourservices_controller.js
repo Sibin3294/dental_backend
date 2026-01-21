@@ -74,3 +74,37 @@ exports.addServiceVideo = async (req, res) => {
     });
   }
 };
+
+
+//delete service video
+
+exports.deleteServiceVideo = async (req, res) => {
+  try {
+    const { videoId } = req.params;
+
+    const video = await ServiceVideo.findById(videoId);
+
+    if (!video) {
+      return res.status(404).json({
+        success: false,
+        message: "Service video not found",
+      });
+    }
+
+    // Optional: delete thumbnail from storage here
+
+    await ServiceVideo.findByIdAndDelete(videoId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Service video permanently deleted",
+    });
+
+  } catch (error) {
+    console.error("Hard Delete Service Video Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
