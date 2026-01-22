@@ -109,3 +109,58 @@ exports.deleteServiceVideo = async (req, res) => {
     });
   }
 };
+
+// get all videos
+
+exports.getAllServiceVideos = async (req, res) => {
+  try {
+    const {
+      serviceId,
+      category,
+      isActive = true,
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    const filter = {};
+
+    // show only active videos by default
+    if (isActive !== undefined) {
+      filter.isActive = isActive === "true";
+    }
+
+    if (serviceId) {
+      filter.serviceId = serviceId;
+    }
+
+    if (category) {
+      filter.category = category;
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [videos, total] = await Promise.all([
+      ServiceVideo.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit)),
+      ServiceVideo.countDocuments(filter),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: "Service videos fetched successfully",
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      data: videos,
+    });
+
+  } catch (error) {
+    console.error("Get Service Videos Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
