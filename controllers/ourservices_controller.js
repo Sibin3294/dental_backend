@@ -80,7 +80,8 @@ exports.addServiceVideo = async (req, res) => {
 
 exports.deleteServiceVideo = async (req, res) => {
   try {
-    const { videoId } = req.params;
+    // const { videoId } = req.params;
+    const { videoId } = req.body;
 
     const video = await ServiceVideo.findById(videoId);
 
