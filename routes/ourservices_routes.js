@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.post("/addServiceVideo", addServiceVideo);
 router.delete("/deleteServiceVideo", deleteServiceVideo);
-router.delete("/getAllServiceVideos", getAllServiceVideos);
+router.get("/getAllServiceVideos", getAllServiceVideos);
 
 
 module.exports = router;
