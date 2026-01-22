@@ -114,17 +114,10 @@ exports.deleteServiceVideo = async (req, res) => {
 
 exports.getAllServiceVideos = async (req, res) => {
   try {
-    const {
-      serviceId,
-      category,
-      isActive = true,
-      page = 1,
-      limit = 10,
-    } = req.query;
+    const { serviceId, category, isActive, page = 1, limit = 10 } = req.query;
 
     const filter = {};
 
-    // show only active videos by default
     if (isActive !== undefined) {
       filter.isActive = isActive === "true";
     }
@@ -164,3 +157,4 @@ exports.getAllServiceVideos = async (req, res) => {
     });
   }
 };
+
