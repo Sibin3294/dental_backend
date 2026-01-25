@@ -277,6 +277,49 @@ exports.updateDentist = async (req, res) => {
 //   }
 // };
 
+// exports.addDentistSlots = async (req, res) => {
+//   try {
+//     const { dentistId } = req.params;
+//     const { date, slots } = req.body;
+
+//     if (!date || !slots || slots.length === 0) {
+//       return res.status(400).json({
+//         message: "Date and slots are required",
+//       });
+//     }
+
+//     const normalizedDate = new Date(date);
+//     normalizedDate.setUTCHours(0, 0, 0, 0);
+
+//     const slotObjects = slots.map((time) => ({
+//       time,
+//       isBooked: false,
+//     }));
+
+//     const dentistSlot = await DentistSlot.create({
+//       dentistId,
+//       date: normalizedDate,
+//       slots: slotObjects,
+//     });
+
+//     res.status(201).json({
+//       message: "Dentist slots added successfully",
+//       data: dentistSlot,
+//     });
+//   } catch (error) {
+//     if (error.code === 11000) {
+//       return res.status(409).json({
+//         message: "Slots already added for this dentist on this date",
+//       });
+//     }
+
+//     res.status(500).json({
+//       message: "Failed to add slots",
+//       error: error.message,
+//     });
+//   }
+// };
+
 exports.addDentistSlots = async (req, res) => {
   try {
     const { dentistId } = req.params;
@@ -288,31 +331,58 @@ exports.addDentistSlots = async (req, res) => {
       });
     }
 
+    // Normalize date (important)
     const normalizedDate = new Date(date);
     normalizedDate.setUTCHours(0, 0, 0, 0);
 
-    const slotObjects = slots.map((time) => ({
+    // Find existing record
+    let dentistSlot = await DentistSlot.findOne({
+      dentistId,
+      date: normalizedDate,
+    });
+
+    // Convert incoming slots to objects
+    const newSlotObjects = slots.map((time) => ({
       time,
       isBooked: false,
     }));
 
-    const dentistSlot = await DentistSlot.create({
-      dentistId,
-      date: normalizedDate,
-      slots: slotObjects,
-    });
+    // ✅ CASE 1: No slots for this date yet → CREATE
+    if (!dentistSlot) {
+      dentistSlot = await DentistSlot.create({
+        dentistId,
+        date: normalizedDate,
+        slots: newSlotObjects,
+      });
 
-    res.status(201).json({
-      message: "Dentist slots added successfully",
-      data: dentistSlot,
-    });
-  } catch (error) {
-    if (error.code === 11000) {
-      return res.status(409).json({
-        message: "Slots already added for this dentist on this date",
+      return res.status(201).json({
+        message: "Dentist slots added successfully",
+        data: dentistSlot,
       });
     }
 
+    // ✅ CASE 2: Slots exist → ADD ONLY NEW TIMES
+    const existingTimes = dentistSlot.slots.map((s) => s.time);
+
+    const uniqueSlots = newSlotObjects.filter(
+      (s) => !existingTimes.includes(s.time)
+    );
+
+    if (uniqueSlots.length === 0) {
+      return res.status(409).json({
+        message: "All selected slots already exist for this date",
+      });
+    }
+
+    dentistSlot.slots.push(...uniqueSlots);
+    await dentistSlot.save();
+
+    res.status(200).json({
+      message: "New slots added successfully",
+      addedSlots: uniqueSlots,
+      data: dentistSlot,
+    });
+  } catch (error) {
     res.status(500).json({
       message: "Failed to add slots",
       error: error.message,
