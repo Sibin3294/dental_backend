@@ -320,6 +320,90 @@ exports.updateDentist = async (req, res) => {
 //   }
 // };
 
+// exports.addDentistSlots = async (req, res) => {
+//   try {
+//     const { dentistId } = req.params;
+//     const { date, slots } = req.body;
+
+//     if (!date || !slots || slots.length === 0) {
+//       return res.status(400).json({
+//         message: "Date and slots are required",
+//       });
+//     }
+
+//     // Normalize date (important)
+//     const normalizedDate = new Date(date);
+//     normalizedDate.setUTCHours(0, 0, 0, 0);
+
+//     // Find existing record
+//     let dentistSlot = await DentistSlot.findOne({
+//       dentistId,
+//       date: normalizedDate,
+//     });
+
+//     // Convert incoming slots to objects
+//     const newSlotObjects = slots.map((time) => ({
+//       time,
+//       isBooked: false,
+//     }));
+
+//     // ✅ CASE 1: No slots for this date yet → CREATE
+//     if (!dentistSlot) {
+//       dentistSlot = await DentistSlot.create({
+//         dentistId,
+//         date: normalizedDate,
+//         slots: newSlotObjects,
+//       });
+
+//       return res.status(201).json({
+//         message: "Dentist slots added successfully",
+//         data: dentistSlot,
+//       });
+//     }
+
+//     // ✅ CASE 2: Slots exist → ADD ONLY NEW TIMES
+//     const existingTimes = dentistSlot.slots.map((s) => s.time);
+
+//     const uniqueSlots = newSlotObjects.filter(
+//       (s) => !existingTimes.includes(s.time)
+//     );
+
+//     if (uniqueSlots.length === 0) {
+//       return res.status(409).json({
+//         message: "All selected slots already exist for this date",
+//       });
+//     }
+
+//     dentistSlot.slots.push(...uniqueSlots);
+//     await dentistSlot.save();
+
+//      // 🔔 SEND PUSH TO ALL USERS
+//     const users = await User.find({ fcmToken: { $ne: "" } }).select("fcmToken");
+
+//     const tokens = users.map(u => u.fcmToken);
+
+//     await sendPushToMany(
+//       tokens,
+//       "🦷 New Slot available!",
+//       `Dr. ${name} (${specialization}) added new appointment timing `,
+//       {
+//         dentistId: dentistSlot._id.toString,
+//         type: "DENTIST_SLOT",
+//       }
+//     );
+
+//     res.status(200).json({
+//       message: "New slots added successfully",
+//       addedSlots: uniqueSlots,
+//       data: dentistSlot,
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       message: "Failed to add slots",
+//       error: error.message,
+//     });
+//   }
+// };
 exports.addDentistSlots = async (req, res) => {
   try {
     const { dentistId } = req.params;
@@ -331,55 +415,76 @@ exports.addDentistSlots = async (req, res) => {
       });
     }
 
-    // Normalize date (important)
+    // Normalize date
     const normalizedDate = new Date(date);
     normalizedDate.setUTCHours(0, 0, 0, 0);
 
-    // Find existing record
+    // Fetch dentist info (for push)
+    const dentist = await Dentist.findById(dentistId).select(
+      "name specialization"
+    );
+
+    if (!dentist) {
+      return res.status(404).json({ message: "Dentist not found" });
+    }
+
     let dentistSlot = await DentistSlot.findOne({
       dentistId,
       date: normalizedDate,
     });
 
-    // Convert incoming slots to objects
     const newSlotObjects = slots.map((time) => ({
       time,
       isBooked: false,
     }));
 
-    // ✅ CASE 1: No slots for this date yet → CREATE
+    // CASE 1: No record yet
     if (!dentistSlot) {
       dentistSlot = await DentistSlot.create({
         dentistId,
         date: normalizedDate,
         slots: newSlotObjects,
       });
+    } else {
+      // CASE 2: Append only new times
+      const existingTimes = dentistSlot.slots.map((s) => s.time);
 
-      return res.status(201).json({
-        message: "Dentist slots added successfully",
-        data: dentistSlot,
-      });
+      const uniqueSlots = newSlotObjects.filter(
+        (s) => !existingTimes.includes(s.time)
+      );
+
+      if (uniqueSlots.length === 0) {
+        return res.status(409).json({
+          message: "All selected slots already exist for this date",
+        });
+      }
+
+      dentistSlot.slots.push(...uniqueSlots);
+      await dentistSlot.save();
     }
 
-    // ✅ CASE 2: Slots exist → ADD ONLY NEW TIMES
-    const existingTimes = dentistSlot.slots.map((s) => s.time);
+    // 🔔 SEND PUSH TO USERS
+    const users = await User.find({
+      fcmToken: { $exists: true, $ne: "" },
+    }).select("fcmToken");
 
-    const uniqueSlots = newSlotObjects.filter(
-      (s) => !existingTimes.includes(s.time)
-    );
+    const tokens = users.map((u) => u.fcmToken);
 
-    if (uniqueSlots.length === 0) {
-      return res.status(409).json({
-        message: "All selected slots already exist for this date",
-      });
+    if (tokens.length > 0) {
+      await sendPushToMany(
+        tokens,
+        "🦷 New appointment available!",
+        `Dr. ${dentist.name} (${dentist.specialization}) added new slots on ${normalizedDate.toDateString()}`,
+        {
+          type: "DENTIST_SLOT",
+          dentistId: dentistId.toString(),
+          date: normalizedDate.toISOString(),
+        }
+      );
     }
-
-    dentistSlot.slots.push(...uniqueSlots);
-    await dentistSlot.save();
 
     res.status(200).json({
-      message: "New slots added successfully",
-      addedSlots: uniqueSlots,
+      message: "Slots added successfully",
       data: dentistSlot,
     });
   } catch (error) {
@@ -389,6 +494,7 @@ exports.addDentistSlots = async (req, res) => {
     });
   }
 };
+
 
 
 // GET DENTISTS SLOTS
