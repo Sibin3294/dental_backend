@@ -237,6 +237,46 @@ exports.updateDentist = async (req, res) => {
 
 
 // ADD SLOTS FOR DENTISTS
+// exports.addDentistSlots = async (req, res) => {
+//   try {
+//     const { dentistId } = req.params;
+//     const { date, slots } = req.body;
+
+//     if (!date || !slots || slots.length === 0) {
+//       return res.status(400).json({
+//         message: "Date and slots are required"
+//       });
+//     }
+
+//     const slotObjects = slots.map(time => ({
+//       time,
+//       isBooked: false
+//     }));
+
+//     const dentistSlot = await DentistSlot.create({
+//       dentistId,
+//       date: new Date(date),
+//       slots: slotObjects
+//     });
+
+//     res.status(201).json({
+//       message: "Dentist slots added successfully",
+//       data: dentistSlot
+//     });
+//   } catch (error) {
+//     if (error.code === 11000) {
+//       return res.status(409).json({
+//         message: "Slots already added for this dentist on this date"
+//       });
+//     }
+
+//     res.status(500).json({
+//       message: "Failed to add slots",
+//       error: error.message
+//     });
+//   }
+// };
+
 exports.addDentistSlots = async (req, res) => {
   try {
     const { dentistId } = req.params;
@@ -244,38 +284,42 @@ exports.addDentistSlots = async (req, res) => {
 
     if (!date || !slots || slots.length === 0) {
       return res.status(400).json({
-        message: "Date and slots are required"
+        message: "Date and slots are required",
       });
     }
 
-    const slotObjects = slots.map(time => ({
+    const normalizedDate = new Date(date);
+    normalizedDate.setUTCHours(0, 0, 0, 0);
+
+    const slotObjects = slots.map((time) => ({
       time,
-      isBooked: false
+      isBooked: false,
     }));
 
     const dentistSlot = await DentistSlot.create({
       dentistId,
-      date: new Date(date),
-      slots: slotObjects
+      date: normalizedDate,
+      slots: slotObjects,
     });
 
     res.status(201).json({
       message: "Dentist slots added successfully",
-      data: dentistSlot
+      data: dentistSlot,
     });
   } catch (error) {
     if (error.code === 11000) {
       return res.status(409).json({
-        message: "Slots already added for this dentist on this date"
+        message: "Slots already added for this dentist on this date",
       });
     }
 
     res.status(500).json({
       message: "Failed to add slots",
-      error: error.message
+      error: error.message,
     });
   }
 };
+
 
 // GET DENTISTS SLOTS
 exports.getDentistSlots = async (req, res) => {
