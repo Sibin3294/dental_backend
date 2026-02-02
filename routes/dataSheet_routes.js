@@ -5,7 +5,7 @@ const { exportPatientsData } = require("../controllers/dataSheet_controller");
 
 const router = express.Router();
 
-router.get("/patients/export", exportPatientsData);
+router.get("/patients", exportPatientsData);
 
 
 
