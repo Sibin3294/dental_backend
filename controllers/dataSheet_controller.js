@@ -1,5 +1,6 @@
-import { Parser } from "json2csv";
-import Patient from "../models/User";
+const Patient = require("../models/User");
+const { Parser } = require("json2csv");
+
 
 exports.exportPatientsData = async (req, res) => {
   try {
