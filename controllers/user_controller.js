@@ -6,7 +6,7 @@ const User = require("../models/User");
 
 exports.getAllPatients = async (req, res) => {
   try {
-    const patients = await User.find();
+    const patients = await User.find().select("-password -resetPasswordToken -resetPasswordExpires");
     res.json({ success: true, data: patients });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -90,7 +90,7 @@ exports.addMorePatientInfo = async (req, res) => {
       userId,
       updateData,
       { new: true }
-    );
+    ).select("-password -resetPasswordToken -resetPasswordExpires");
 
     if (!updatedPatient) {
       return res.status(404).json({
@@ -138,10 +138,13 @@ exports.deletePatient = async (req, res) => {
       });
     }
 
+    const { password, resetPasswordToken, resetPasswordExpires, ...safeDeleted } =
+      deletedPatient.toObject();
+
     res.json({
       success: true,
       message: "Patient deleted successfully",
-      deleted: deletedPatient,
+      deleted: safeDeleted,
     });
   } catch (err) {
     res.status(500).json({
@@ -161,12 +164,6 @@ exports.updatePatient = async (req, res) => {
       id,
       {
         name: req.body.name,
-        specialization: req.body.specialization,
-        image: req.body.image,
-        experience: req.body.experience,
-        qualification: req.body.qualification,
-
-        // --- MORE INFO FIELDS (optional) ---
         phone: req.body.phone,
         address: req.body.address,
         gender: req.body.gender,
@@ -176,8 +173,8 @@ exports.updatePatient = async (req, res) => {
         height: req.body.height,
         lastVisitDate: req.body.lastVisitDate,
       },
-      { new: true } // returns updated doc
-    );
+      { new: true }
+    ).select("-password -resetPasswordToken -resetPasswordExpires");
 
     if (!updated) {
       return res.status(404).json({ success: false, message: "User not found" });

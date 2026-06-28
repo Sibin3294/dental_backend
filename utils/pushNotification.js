@@ -1,20 +1,20 @@
-const admin = require("../config/firebaseAdmin");
+const { getFirebaseAdmin } = require("../config/firebaseAdmin");
 
 exports.sendPushToMany = async (tokens, title, body, data = {}) => {
-    console.log("reached here");
   if (!tokens || !tokens.length) return;
 
+  const admin = getFirebaseAdmin();
+  if (!admin) {
+    console.warn("Push skipped — Firebase not configured");
+    return;
+  }
+
   const message = {
-    notification: {
-      title,
-      body,
-    },
+    notification: { title, body },
     data,
     tokens,
   };
 
-  // ✅ Firebase Admin v11+
   const response = await admin.messaging().sendEachForMulticast(message);
-
-  console.log("Push response:", response);
+  console.log("Push response:", response.successCount, "sent,", response.failureCount, "failed");
 };

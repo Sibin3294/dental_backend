@@ -500,8 +500,15 @@ exports.addDentistSlots = async (req, res) => {
 // GET DENTISTS SLOTS
 exports.getDentistSlots = async (req, res) => {
   try {
-    const { dentistId } = req.params;
+    const dentistId = req.params.dentistId || req.query.dentistId;
     const { date } = req.query;
+
+    if (!dentistId) {
+      return res.status(400).json({
+        success: false,
+        message: "dentistId is required (query param or route param)",
+      });
+    }
 
     const query = { dentistId };
 
@@ -512,13 +519,15 @@ exports.getDentistSlots = async (req, res) => {
     const slots = await DentistSlot.find(query).sort({ date: 1 });
 
     res.json({
+      success: true,
       message: "Slots fetched successfully",
-      data: slots
+      data: slots,
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
       message: "Failed to fetch slots",
-      error: error.message
+      error: error.message,
     });
   }
 };

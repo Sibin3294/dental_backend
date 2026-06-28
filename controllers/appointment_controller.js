@@ -149,13 +149,12 @@ exports.createAppointment = async (req, res) => {
     // -----------------------------
     const appointmentData = {
       patientId,
-      patientName: `${patient.firstName} ${patient.lastName}`.trim(), // auto-fill
-      mobile: patient.mobile, // auto-fill
+      mobile: patient.phone || "",
       reason,
       dentist,
       startTime,
       endTime,
-      paymentStatus: "pending"
+      paymentStatus: "pending",
     };
 
     // -----------------------------
@@ -497,13 +496,13 @@ exports.createAppAppointment = async (req, res) => {
     // -----------------------------
     const appointment = await Appointment.create({
       patientId,
-      mobile: patient.mobile,
+      mobile: patient.phone || "",
       reason,
       dentist,
       startTime,
       endTime,
       status: "scheduled",
-      paymentStatus: "pending"
+      paymentStatus: "pending",
     });
 
     // -----------------------------

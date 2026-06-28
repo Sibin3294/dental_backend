@@ -53,55 +53,97 @@ exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "name, email, and password are required",
+      });
+    }
+
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: "An account with this email already exists",
+      });
+    }
+
     const hashed = await bcrypt.hash(password, 10);
 
     const user = new User({ name, email, password: hashed });
     await user.save();
 
-    await sendEmail({
-      to: email,
-      subject: "Welcome to Dental Care 🦷",
-      html: `
-        <h2>Hello ${name},</h2>
-        <p>Welcome to <b>Dental Care</b>.</p>
-        <p>Your account has been created successfully.</p>
-        <br/>
-        <p>🦷 Stay healthy,<br/>Dental Care Team</p>
-      `,
-    });
+    try {
+      await sendEmail({
+        to: email,
+        subject: "Welcome to Dental Care 🦷",
+        html: `
+          <h2>Hello ${name},</h2>
+          <p>Welcome to <b>Dental Care</b>.</p>
+          <p>Your account has been created successfully.</p>
+          <br/>
+          <p>🦷 Stay healthy,<br/>Dental Care Team</p>
+        `,
+      });
+    } catch (emailErr) {
+      console.error("Welcome email failed:", emailErr.message);
+    }
 
     res.status(201).json({
       success: true,
-      message: "User registered & email sent",
+      message: "User registered successfully",
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false });
+    console.error("Register error:", err);
+    res.status(500).json({ success: false, message: "Registration failed" });
   }
 };
 
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  const user = await User.findOne({ email });
-  if (!user) return res.status(400).json({ message: "User not found" });
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
 
-  const match = await bcrypt.compare(password, user.password);
-  if (!match) return res.status(400).json({ message: "Incorrect password" });
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: "Invalid email or password" });
 
-  const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(400).json({ message: "Invalid email or password" });
 
-  res.json({ token, user });
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    const safeUser = await User.findById(user._id).select("-password -resetPasswordToken -resetPasswordExpires");
+
+    res.json({ success: true, token, user: safeUser });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ success: false, message: "Login failed" });
+  }
 };
 
 exports.saveFcmToken = async (req, res) => {
-  const { userId, fcmToken } = req.body;
-  console.log("user id and fcmtoken");
-  console.log(userId);
-  console.log(fcmToken);
-  await User.findByIdAndUpdate(userId, { fcmToken });
+  try {
+    const { userId, fcmToken } = req.body;
 
-  res.json({ success: true });
+    if (!userId || !fcmToken) {
+      return res.status(400).json({ success: false, message: "userId and fcmToken are required" });
+    }
+
+    const user = await User.findByIdAndUpdate(userId, { fcmToken }, { new: true });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Save FCM token error:", err);
+    res.status(500).json({ success: false, message: "Failed to save FCM token" });
+  }
 };
 
 // forgot password
@@ -179,7 +221,7 @@ exports.resetPassword = async (req, res) => {
     if (!user)
       return res.status(400).json({ message: "Token invalid or expired" });
 
-    user.password = newPassword; // ⚠️ hash if you use bcrypt
+    user.password = await bcrypt.hash(newPassword, 10);
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
 

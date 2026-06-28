@@ -22,7 +22,7 @@ router.delete("/:id", deleteDentist);
 router.put("/update/:id", updateDentist);
 router.post("/:dentistId/slots", addDentistSlots);
 router.get("/getDentistSlots", getDentistSlots);
-router.get("/getDentistSlots", getDentistSlots);
+router.get("/:dentistId/slots", getDentistSlots);
 router.put("/updateDentistSlots/:dentistId/slots", updateDentistSlots);
 router.get("/getAvailableDentistsByDate", getAvailableDentistsByDate);
 
